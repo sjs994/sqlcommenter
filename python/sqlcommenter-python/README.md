@@ -6,7 +6,7 @@
 
 Python modules for popular projects that add meta info to your SQL queries as comments.
 
- * [Django](#django)
+ * [Django](#django) 
  * [SQLAlchemy](#sqlalchemy)
  * [Psycopg2](#psycopg2)
 
