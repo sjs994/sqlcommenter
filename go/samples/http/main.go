@@ -11,6 +11,7 @@ import (
 	httpnet "github.com/google/sqlcommenter/go/net/http"
 	"github.com/julienschmidt/httprouter"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"sqlcommenter-http/mysqldb"
@@ -20,15 +21,15 @@ import (
 
 func MakeIndexRoute(db *gosql.DB) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		exp, _ := stdouttrace.New(stdouttrace.WithPrettyPrint())
-		bsp := sdktrace.NewSimpleSpanProcessor(exp) // You should use batch span processor in prod
-		tp := sdktrace.NewTracerProvider(
-			sdktrace.WithSampler(sdktrace.AlwaysSample()),
-			sdktrace.WithSpanProcessor(bsp),
-		)
+		// exp, _ := stdouttrace.New(stdouttrace.WithPrettyPrint())
+		// bsp := sdktrace.NewSimpleSpanProcessor(exp) // You should use batch span processor in prod
+		// tp := sdktrace.NewTracerProvider(
+		// 	sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		// 	sdktrace.WithSpanProcessor(bsp),
+		// )
 
-		ctx, span := tp.Tracer("foo").Start(r.Context(), "parent-span-name")
-		defer span.End()
+		// ctx, span := tp.Tracer("foo").Start(r.Context(), "parent-span-name")
+		// defer span.End()
 
 		db.ExecContext(ctx, "Select 1")
 		db.Exec("Select 2")
@@ -95,6 +96,55 @@ func runForPg() *gosql.DB {
 	return db
 }
 
+func runAppUsingOTELHttp(db *sql.DB) {
+	indexFn := makeIndexHandler(db)
+	handler := http.HandlerFunc(httpHandler)
+	wrappedHandler := otelhttp.NewHandler(handler, "hello-instrumented")
+	http.Handle("/hello-instrumented", wrappedHandler)
+
+	// And start the HTTP serve.
+	log.Fatal(http.ListenAndServe(":3030", nil))
+}
+
+func makeIndexHandler(db *gosql.DB) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// exp, _ := stdouttrace.New(stdouttrace.WithPrettyPrint())
+		// bsp := sdktrace.NewSimpleSpanProcessor(exp) // You should use batch span processor in prod
+		// tp := sdktrace.NewTracerProvider(
+		// 	sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		// 	sdktrace.WithSpanProcessor(bsp),
+		// )
+
+		// ctx, span := tp.Tracer("foo").Start(r.Context(), "parent-span-name")
+		// defer span.End()
+
+		db.ExecContext(ctx, "Select 1")
+		db.Exec("Select 2")
+
+		stmt1, err := db.Prepare("Select 3")
+		if err != nil {
+			log.Fatal(err)
+		}
+		stmt1.QueryRow()
+
+		stmt2, err := db.PrepareContext(ctx, "Select 4")
+		if err != nil {
+			log.Fatal(err)
+		}
+		stmt2.QueryRow()
+
+		db.QueryContext(ctx, "Select 5")
+
+		fmt.Fprintf(w, "Hello World!\r\n")
+	}
+}
+
+func connectToDB() *sql.DB {
+	connection := "postgres://dev:dev@localhost/sqlcommenter_db?sslmode=disable"
+	db := pgdb.ConnectPG(connection)	
+	return db
+}
+
 func main() {
 	var engine string
 
@@ -105,14 +155,19 @@ func main() {
 		log.Fatalf("invalid engine: %s", engine)
 	}
 
-	var db *gosql.DB
+	// var db *gosql.DB
 
-	switch engine {
-	case "mysql":
-		db = runForMysql()
-	case "pg":
-		db = runForPg()
-	}
+
+	// switch engine {
+	// case "mysql":
+	// 	db = runForMysql()
+	// case "pg":
+	// 	db = runForPg()
+	// }
+
+	db := connectToDB()
+	runAppUsingOTELHttp(db)
+
 
 	db.Close()
 }
