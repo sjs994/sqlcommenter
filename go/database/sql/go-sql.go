@@ -17,97 +17,158 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
-	"strings"
 
 	"github.com/google/sqlcommenter/go/core"
 )
 
-type DB struct {
-	*sql.DB
-	options core.CommenterOptions
+var (
+	_ driver.Driver        = (*sqlCommenterDriver)(nil)
+	_ driver.DriverContext = (*sqlCommenterDriver)(nil)
+)
+
+// SQLCommenterDriver returns a driver object that contains SQLCommenter drivers.
+type sqlCommenterDriver struct {
+	driver driver.Driver
 }
 
-func Open(driverName string, dataSourceName string, options core.CommenterOptions) (*DB, error) {
-	db, err := sql.Open(driverName, dataSourceName)
-	return &DB{DB: db, options: options}, err
+type sqlCommenterConn struct {
+	driver.Conn
 }
 
-// ***** Query Functions *****
-
-func (db *DB) Query(query string, args ...any) (*sql.Rows, error) {
-	return db.DB.Query(db.withComment(context.Background(), query), args...)
+func newConn(conn driver.Conn) *sqlCommenterConn {
+	return &sqlCommenterConn{
+		Conn: conn,
+	}
 }
 
-func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
-	return db.DB.QueryRow(db.withComment(context.Background(), query), args...)
+func newDriver(dri driver.Driver) driver.Driver {
+	if _, ok := dri.(driver.DriverContext); ok {
+		return newSQLCommenterDriver(dri)
+	}
+	// Only implements driver.Driver
+	return struct{ driver.Driver }{newSQLCommenterDriver(dri)}
 }
 
-func (db *DB) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	return db.DB.QueryContext(ctx, db.withComment(ctx, query), args...)
+func newSQLCommenterDriver(dri driver.Driver) *sqlCommenterDriver {
+	return &sqlCommenterDriver{driver: dri}
 }
 
-func (db *DB) Exec(query string, args ...any) (sql.Result, error) {
-	return db.DB.Exec(db.withComment(context.Background(), query), args...)
+func (d *sqlCommenterDriver) Open(name string) (driver.Conn, error) {
+	rawConn, err := d.driver.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return newConn(rawConn), nil
 }
 
-func (db *DB) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return db.DB.ExecContext(ctx, db.withComment(ctx, query), args...)
+func (d *sqlCommenterDriver) OpenConnector(name string) (driver.Connector, error) {
+	rawConnector, err := d.driver.(driver.DriverContext).OpenConnector(name)
+	if err != nil {
+		return nil, err
+	}
+	return newConnector(rawConnector, d), err
 }
 
-func (db *DB) Prepare(query string) (*sql.Stmt, error) {
-	return db.DB.Prepare(db.withComment(context.Background(), query))
+var _ driver.Connector = (*sqlCommenterConnector)(nil)
+
+type sqlCommenterConnector struct {
+	driver.Connector
+	otDriver *sqlCommenterDriver
 }
 
-func (db *DB) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
-	return db.DB.PrepareContext(ctx, db.withComment(ctx, query))
+func newConnector(connector driver.Connector, otDriver *sqlCommenterDriver) *sqlCommenterConnector {
+	return &sqlCommenterConnector{
+		Connector: connector,
+		otDriver:  otDriver,
+	}
 }
 
-// ***** Query Functions *****
+func (c *sqlCommenterConnector) Connect(ctx context.Context) (connection driver.Conn, err error) {
+	connection, err = c.Connector.Connect(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return newConn(connection), nil
+}
 
-// ***** Commenter Functions *****
+func (c *sqlCommenterConnector) Driver() driver.Driver {
+	return c.otDriver
+}
 
-func (db *DB) withComment(ctx context.Context, query string) string {
-	var commentsMap = map[string]string{}
-	query = strings.TrimSpace(query)
+// dsnConnector is copied from sql.dsnConnector
+type dsnConnector struct {
+	dsn    string
+	driver driver.Driver
+}
 
+func (t dsnConnector) Connect(_ context.Context) (driver.Conn, error) {
+	return t.driver.Open(t.dsn)
+}
+
+func (t dsnConnector) Driver() driver.Driver {
+	return t.driver
+}
+
+func appendSQLComment(query string, commentMap map[string]string) string {
+	comment := core.ConvertMapToComment(commentMap)
+	return fmt.Sprintf(`%s /*%s*/`, query, comment)
+}
+
+func getComments(ctx context.Context) map[string]string {
+	m := map[string]string{}
+	fmt.Printf("Comments: %#v", ctx)
 	// Sorted alphabetically
-	if db.options.EnableAction && (ctx.Value(core.Action) != nil) {
-		commentsMap[core.Action] = ctx.Value(core.Action).(string)
+	if ctx.Value(core.Action) != nil {
+		m[core.Action] = ctx.Value(core.Action).(string)
 	}
-
-	// `driver` information should not be coming from framework.
-	// So, explicitly adding that here.
-	if db.options.EnableDBDriver {
-		commentsMap[core.Driver] = "database/sql"
+	if ctx.Value(core.Framework) != nil {
+		m[core.Framework] = ctx.Value(core.Framework).(string)
 	}
-
-	if db.options.EnableFramework && (ctx.Value(core.Framework) != nil) {
-		commentsMap[core.Framework] = ctx.Value(core.Framework).(string)
+	if ctx.Value(core.Route) != nil {
+		m[core.Route] = ctx.Value(core.Route).(string)
 	}
-
-	if db.options.EnableRoute && (ctx.Value(core.Route) != nil) {
-		commentsMap[core.Route] = ctx.Value(core.Route).(string)
-	}
-
-	if db.options.EnableTraceparent {
-		carrier := core.ExtractTraceparent(ctx)
-		if val, ok := carrier["traceparent"]; ok {
-			commentsMap[core.Traceparent] = val
-		}
-	}
-
-	var commentsString string = ""
-	if len(commentsMap) > 0 { // Converts comments map to string and appends it to query
-		commentsString = fmt.Sprintf("/*%s*/", core.ConvertMapToComment(commentsMap))
-	}
-
-	// A semicolon at the end of the SQL statement means the query ends there.
-	// We need to insert the comment before that to be considered as part of the SQL statemtent.
-	if query[len(query)-1:] == ";" {
-		return fmt.Sprintf("%s%s;", strings.TrimSuffix(query, ";"), commentsString)
-	}
-	return fmt.Sprintf("%s%s", query, commentsString)
+	return m
 }
 
-// ***** Commenter Functions *****
+func (s *sqlCommenterConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	queryer, ok := s.Conn.(driver.QueryerContext)
+	if !ok {
+		return nil, driver.ErrSkip
+	}
+	commentMap := getComments(ctx)
+	query = appendSQLComment(query, commentMap)
+	return queryer.QueryContext(ctx, query, args)
+}
+
+// Raw returns the underlying driver connection
+// Issue: https://github.com/XSAM/otelsql/issues/98
+func (s *sqlCommenterConn) Raw() driver.Conn {
+	return s.Conn
+}
+
+// Open is a wrapper over sql.Open with OTel instrumentation.
+func Open(driverName, dataSourceName string) (*sql.DB, error) {
+	// Retrieve the driver implementation we need to wrap with instrumentation
+	db, err := sql.Open(driverName, "")
+	if err != nil {
+		return nil, err
+	}
+	d := db.Driver()
+	if err = db.Close(); err != nil {
+		return nil, err
+	}
+
+	otDriver := newSQLCommenterDriver(d)
+
+	if _, ok := d.(driver.DriverContext); ok {
+		connector, err := otDriver.OpenConnector(dataSourceName)
+		if err != nil {
+			return nil, err
+		}
+		return sql.OpenDB(connector), nil
+	}
+
+	return sql.OpenDB(dsnConnector{dsn: dataSourceName, driver: otDriver}), nil
+}
