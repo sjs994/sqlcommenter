@@ -16,6 +16,8 @@ github.com/google/sqlcommenter/go/net/http v0.0.1-beta/go.mod h1:tVUqM1YZ/K3eRTd
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/sjs994/sqlcommenter/go/core v0.0.2-alpha h1:1vwGkQrdcEcCZxt1kbcl4Z/E8zJ/O1aTD/PLlGh9/bw=
 github.com/sjs994/sqlcommenter/go/core v0.0.2-alpha/go.mod h1:CZfcqmbIxngExnZ7Se6AsKNVubZhKyi54aeDJZiqTMQ=
+github.com/sjs994/sqlcommenter/go/core v0.0.3-alpha h1:5zkGf8QNIaKGw0xz3ba2DFUkeH5hpObfoyXnBqSskgs=
+github.com/sjs994/sqlcommenter/go/core v0.0.3-alpha/go.mod h1:CZfcqmbIxngExnZ7Se6AsKNVubZhKyi54aeDJZiqTMQ=
 github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMTY=
 go.opentelemetry.io/otel v1.10.0 h1:Y7DTJMR6zs1xkS/upamJYk0SxxN4C9AqRd77jmZnyY4=
 go.opentelemetry.io/otel v1.10.0/go.mod h1:NbvWjCthWHKBEUMpf0/v8ZRZlni86PpGFEMA9pnQSnQ=
