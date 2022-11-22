@@ -32,3 +32,5 @@ require (
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
 	golang.org/x/sys v0.0.0-20220927170352-d9d178bc13c6 // indirect
 )
+
+replace github.com/google/sqlcommenter/go/core v0.0.2-beta => github.com/sjs994/sqlcommenter/go/core v0.0.3-alpha

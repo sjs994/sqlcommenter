@@ -23,6 +23,8 @@ github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8
 github.com/lib/pq v1.10.7 h1:p7ZhMD+KsSRozJr34udlUrhboJwWAgCg34+/ZZNvZZw=
 github.com/lib/pq v1.10.7/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+github.com/sjs994/sqlcommenter/go/core v0.0.3-alpha h1:5zkGf8QNIaKGw0xz3ba2DFUkeH5hpObfoyXnBqSskgs=
+github.com/sjs994/sqlcommenter/go/core v0.0.3-alpha/go.mod h1:CZfcqmbIxngExnZ7Se6AsKNVubZhKyi54aeDJZiqTMQ=
 github.com/sjs994/sqlcommenter/go/database/sql v0.0.2-alpha h1:TSZh5Mqs3EHFYlDt+liUH7fgA/wda+DIxwptOwESVpg=
 github.com/sjs994/sqlcommenter/go/database/sql v0.0.2-alpha/go.mod h1:VdswmF4SM0cbjJdD+3GyM5QuXpHhH6F5nSzcbikzCGY=
 github.com/sjs994/sqlcommenter/go/database/sql v0.0.3-alpha h1:UZKzGI47DlLHf7H9phNVE7ek2ghYXuRdyUN7lPsyyzc=

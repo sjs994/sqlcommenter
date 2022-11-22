@@ -105,6 +105,7 @@ func Open(driverName, dataSourceName string, options core.CommenterOptions) (*sq
 		return nil, err
 	}
 
+	options.Tags.DriverName = driverName
 	sqlCommenterDriver := newSQLCommenterDriver(d, options)
 
 	if _, ok := d.(driver.DriverContext); ok {
