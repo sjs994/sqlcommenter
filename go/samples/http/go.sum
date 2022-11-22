@@ -31,6 +31,10 @@ github.com/sjs994/sqlcommenter/go/database/sql v0.0.5-alpha h1:8OMRLLeo+t1f1F++j
 github.com/sjs994/sqlcommenter/go/database/sql v0.0.5-alpha/go.mod h1:VdswmF4SM0cbjJdD+3GyM5QuXpHhH6F5nSzcbikzCGY=
 github.com/sjs994/sqlcommenter/go/database/sql v0.0.6-alpha h1:26lvlDxS0NojGsDznw/mmL/kTwGn77Yv3e2xSSVgZu4=
 github.com/sjs994/sqlcommenter/go/database/sql v0.0.6-alpha/go.mod h1:1MT7pfPoUD/MNj5YTSX8K5FvPcpp/eebFXiNC4uJnUE=
+github.com/sjs994/sqlcommenter/go/database/sql v0.0.7-alpha h1:S/nq29FqZx1U107rvISwsh574skbPmAf10DK7UCpS00=
+github.com/sjs994/sqlcommenter/go/database/sql v0.0.7-alpha/go.mod h1:Nl8a7oxrewhf5n9XWkbk14sNWnIvR4Zn6PI0NwEBCFk=
+github.com/sjs994/sqlcommenter/go/database/sql v0.0.8-alpha h1:rmCIzfIzWlkCJVA1yn0TDAmb5cobSQuhj7xbkWIvOGw=
+github.com/sjs994/sqlcommenter/go/database/sql v0.0.8-alpha/go.mod h1:IfpjUjYS/lXB1F4bWGboS7NzMzoxXqkdXaHEocYQjys=
 github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMTY=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.4 h1:aUEBEdCa6iamGzg6fuYxDA8ThxvOG240mAvWDU+XLio=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.4/go.mod h1:l2MdsbKTocpPS5nQZscqTR9jd8u96VYZdcpF8Sye7mA=

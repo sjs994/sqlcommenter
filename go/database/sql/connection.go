@@ -12,11 +12,6 @@ import (
 
 var attemptedToAutosetApplication = false
 
-type Tags struct {
-	DriverName  string
-	Application string
-}
-
 type sqlCommenterConn struct {
 	driver.Conn
 	options core.CommenterOptions
@@ -30,22 +25,7 @@ func newSQLCommenterConn(conn driver.Conn, options core.CommenterOptions) *sqlCo
 }
 
 /*
-type Execer interface {
-	Exec(query string, args []Value) (Result, error)
-}
-
-type ExecerContext interface {
-	ExecContext(ctx context.Context, query string, args []NamedValue) (Result, error)
-}
-
-type Queryer interface {
-	Query(query string, args []Value) (Rows, error)
-}
-
-type QueryerContext interface {
-	QueryContext(ctx context.Context, query string, args []NamedValue) (Rows, error)
-}
-
+TODO: Check whether to implement or not ?
 type Conn interface {
 	// Prepare returns a prepared statement, bound to this connection.
 	Prepare(query string) (Stmt, error)
@@ -104,6 +84,16 @@ type SessionResetter interface {
 }
 */
 
+func (s *sqlCommenterConn) Query(query string, args []driver.Value) (driver.Rows, error) {
+	queryer, ok := s.Conn.(driver.Queryer)
+	if !ok {
+		return nil, driver.ErrSkip
+	}
+	ctx := context.Background()
+	extendedQuery := s.withComment(ctx, query)
+	return queryer.Query(extendedQuery, args)
+}
+
 func (s *sqlCommenterConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
 	queryer, ok := s.Conn.(driver.QueryerContext)
 	if !ok {
@@ -111,6 +101,16 @@ func (s *sqlCommenterConn) QueryContext(ctx context.Context, query string, args 
 	}
 	extendedQuery := s.withComment(ctx, query)
 	return queryer.QueryContext(ctx, extendedQuery, args)
+}
+
+func (s *sqlCommenterConn) Exec(query string, args []driver.Value) (driver.Result, error) {
+	execor, ok := s.Conn.(driver.Execer)
+	if !ok {
+		return nil, driver.ErrSkip
+	}
+	ctx := context.Background()
+	extendedQuery := s.withComment(ctx, query)
+	return execor.Exec(extendedQuery, args)
 }
 
 func (s *sqlCommenterConn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
