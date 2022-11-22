@@ -14,6 +14,8 @@ require (
 	golang.org/x/sys v0.0.0-20220927170352-d9d178bc13c6 // indirect
 )
 
+replace github.com/google/sqlcommenter/go/core v0.0.2-beta => github.com/sjs994/sqlcommenter/go/core v0.0.2-alpha
+
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/google/sqlcommenter/go/net/http v0.0.1-beta

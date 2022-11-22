@@ -15,10 +15,10 @@ func ConnectMySQL(connection string) *sql.DB {
 		log.Fatalf("Failed to connect to MySQL(%q), error: %v", connection, err)
 	}
 
-	// err = db.Ping()
-	// if err != nil {
-	// 	log.Fatalf("Failed to ping the database, error: %v", err)
-	// }
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("Failed to ping the database, error: %v", err)
+	}
 
 	return db
 }
