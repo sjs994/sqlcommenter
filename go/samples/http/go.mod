@@ -22,7 +22,7 @@ require (
 
 require github.com/google/sqlcommenter/go/database/sql v0.0.2-beta
 
-replace github.com/google/sqlcommenter/go/database/sql v0.0.2-beta => github.com/sjs994/sqlcommenter/go/database/sql v0.0.8-alpha
+replace github.com/google/sqlcommenter/go/database/sql v0.0.2-beta => github.com/sjs994/sqlcommenter/go/database/sql v0.0.10-alpha
 
 require (
 	github.com/go-logr/logr v1.2.3 // indirect
