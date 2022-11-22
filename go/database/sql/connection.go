@@ -131,34 +131,35 @@ func (s *sqlCommenterConn) Raw() driver.Conn {
 func (conn *sqlCommenterConn) withComment(ctx context.Context, query string) string {
 	var commentsMap = map[string]string{}
 	query = strings.TrimSpace(query)
+	config := conn.options.Config
 
 	// Sorted alphabetically
-	if conn.options.EnableAction && (ctx.Value(core.Action) != nil) {
+	if config.EnableAction && (ctx.Value(core.Action) != nil) {
 		commentsMap[core.Action] = ctx.Value(core.Action).(string)
 	}
 
 	// `driver` information should not be coming from framework.
 	// So, explicitly adding that here.
-	if conn.options.EnableDBDriver {
+	if config.EnableDBDriver {
 		commentsMap[core.Driver] = fmt.Sprintf("database/sql:%s", conn.options.Tags.DriverName)
 	}
 
-	if conn.options.EnableFramework && (ctx.Value(core.Framework) != nil) {
+	if config.EnableFramework && (ctx.Value(core.Framework) != nil) {
 		commentsMap[core.Framework] = ctx.Value(core.Framework).(string)
 	}
 
-	if conn.options.EnableRoute && (ctx.Value(core.Route) != nil) {
+	if config.EnableRoute && (ctx.Value(core.Route) != nil) {
 		commentsMap[core.Route] = ctx.Value(core.Route).(string)
 	}
 
-	if conn.options.EnableTraceparent {
+	if config.EnableTraceparent {
 		carrier := core.ExtractTraceparent(ctx)
 		if val, ok := carrier["traceparent"]; ok {
 			commentsMap[core.Traceparent] = val
 		}
 	}
 
-	if conn.options.EnableApplication {
+	if config.EnableApplication {
 		if !attemptedToAutosetApplication && conn.options.Tags.Application == "" {
 			attemptedToAutosetApplication = true
 			bi, ok := debug.ReadBuildInfo()
