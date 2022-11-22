@@ -31,17 +31,29 @@ const (
 	Controller  string = "controller"
 	Action      string = "action"
 	Framework   string = "framework"
-	Driver      string = "driver"
+	Driver      string = "db_driver"
 	Traceparent string = "traceparent"
+	Application string = "application"
 )
 
-type CommenterOptions struct {
+type CommenterConfig struct {
 	EnableDBDriver    bool
 	EnableRoute       bool
 	EnableFramework   bool
 	EnableController  bool
 	EnableAction      bool
 	EnableTraceparent bool
+	EnableApplication bool
+}
+
+type StaticTags struct {
+	Application string
+	DriverName  string
+}
+
+type CommenterOptions struct {
+	Config CommenterConfig
+	Tags   StaticTags
 }
 
 func encodeURL(k string) string {

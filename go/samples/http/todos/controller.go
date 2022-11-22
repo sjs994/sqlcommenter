@@ -3,11 +3,11 @@ package todos
 import (
 	"context"
 	"encoding/json"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 
-	gosql "github.com/google/sqlcommenter/go/database/sql"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -22,7 +22,7 @@ type TodoDTO struct {
 
 type TodosController struct {
 	Engine string
-	DB     *gosql.DB
+	DB     *sql.DB
 	SQL    TodosQueries
 }
 

@@ -5,20 +5,22 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"database/sql"
 
 	"github.com/google/sqlcommenter/go/core"
-	gosql "github.com/google/sqlcommenter/go/database/sql"
 	httpnet "github.com/google/sqlcommenter/go/net/http"
 	"github.com/julienschmidt/httprouter"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 
 	"sqlcommenter-http/mysqldb"
 	"sqlcommenter-http/pgdb"
 	"sqlcommenter-http/todos"
 )
 
-func MakeIndexRoute(db *gosql.DB) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func MakeIndexRoute(db *sql.DB) func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		exp, _ := stdouttrace.New(stdouttrace.WithPrettyPrint())
 		bsp := sdktrace.NewSimpleSpanProcessor(exp) // You should use batch span processor in prod
@@ -81,7 +83,7 @@ func runApp(todosController *todos.TodosController) {
 
 // host = “host.docker.internal”
 
-func runForMysql() *gosql.DB {
+func runForMysql() *sql.DB {
 	connection := "root:password@tcp(mysql:3306)/sqlcommenter_db"
 	db := mysqldb.ConnectMySQL(connection)
 	todosController := &todos.TodosController{Engine: "mysql", DB: db, SQL: todos.MySQLQueries{}}
@@ -89,11 +91,47 @@ func runForMysql() *gosql.DB {
 	return db
 }
 
-func runForPg() *gosql.DB {
+func runForPg() *sql.DB {
 	connection := "host=postgres user=postgres password=postgres dbname=postgres port=5432 sslmode=disable"
 	db := pgdb.ConnectPG(connection)
 	todosController := &todos.TodosController{Engine: "pg", DB: db, SQL: todos.PGQueries{}}
 	runApp(todosController)
+	return db
+}
+
+func runAppUsingOTELHttp(db *sql.DB) {
+	indexFn := makeIndexHandler(db)
+	handler := http.HandlerFunc(indexFn)
+	wrappedHandler := otelhttp.NewHandler(handler, "index-instrumented")
+	http.Handle("/index", wrappedHandler)
+
+	// And start the HTTP serve.
+	log.Fatal(http.ListenAndServe(":8081", nil))
+}
+
+var tracer = otel.Tracer("github.com/sqlcommenter/sampleapp/http")
+
+func makeIndexHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// exp, _ := stdouttrace.New(stdouttrace.WithPrettyPrint())
+		// bsp := sdktrace.NewSimpleSpanProcessor(exp) // You should use batch span processor in prod
+		// tp := sdktrace.NewTracerProvider(
+		// 	sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		// 	sdktrace.WithSpanProcessor(bsp),
+		// )
+
+		ctx, span := tracer.Start(r.Context(), "index")
+		defer span.End()
+		ctx = core.ContextInject(ctx, httpnet.NewHTTPRequestExtractor(r, makeIndexHandler))
+
+		db.QueryContext(ctx, "Select 5")
+		fmt.Fprintf(w, "Hello World!\r\n")
+	}
+}
+
+func connectToDB() *sql.DB {
+	connection := "host=postgres user=postgres password=postgres dbname=postgres port=5432 sslmode=disable"
+	db := pgdb.ConnectPG(connection)	
 	return db
 }
 
@@ -107,7 +145,7 @@ func main() {
 		log.Fatalf("invalid engine: %s", engine)
 	}
 
-	var db *gosql.DB
+	var db *sql.DB
 
 	switch engine {
 	case "mysql":
@@ -115,6 +153,10 @@ func main() {
 	case "pg":
 		db = runForPg()
 	}
+
+	// db = connectToDB()
+	// runAppUsingOTELHttp(db)
+
 
 	db.Close()
 }
