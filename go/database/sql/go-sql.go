@@ -33,26 +33,18 @@ type sqlCommenterDriver struct {
 	driver driver.Driver
 }
 
+func newSQLCommenterDriver(dri driver.Driver) *sqlCommenterDriver {
+	return &sqlCommenterDriver{driver: dri}
+}
+
 type sqlCommenterConn struct {
 	driver.Conn
 }
 
-func newConn(conn driver.Conn) *sqlCommenterConn {
+func newSQLCommenterConn(conn driver.Conn) *sqlCommenterConn {
 	return &sqlCommenterConn{
 		Conn: conn,
 	}
-}
-
-func newDriver(dri driver.Driver) driver.Driver {
-	if _, ok := dri.(driver.DriverContext); ok {
-		return newSQLCommenterDriver(dri)
-	}
-	// Only implements driver.Driver
-	return struct{ driver.Driver }{newSQLCommenterDriver(dri)}
-}
-
-func newSQLCommenterDriver(dri driver.Driver) *sqlCommenterDriver {
-	return &sqlCommenterDriver{driver: dri}
 }
 
 func (d *sqlCommenterDriver) Open(name string) (driver.Conn, error) {
@@ -60,7 +52,7 @@ func (d *sqlCommenterDriver) Open(name string) (driver.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newConn(rawConn), nil
+	return newSQLCommenterConn(rawConn), nil
 }
 
 func (d *sqlCommenterDriver) OpenConnector(name string) (driver.Connector, error) {
@@ -90,7 +82,7 @@ func (c *sqlCommenterConnector) Connect(ctx context.Context) (connection driver.
 	if err != nil {
 		return nil, err
 	}
-	return newConn(connection), nil
+	return newSQLCommenterConn(connection), nil
 }
 
 func (c *sqlCommenterConnector) Driver() driver.Driver {
@@ -160,15 +152,15 @@ func Open(driverName, dataSourceName string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	otDriver := newSQLCommenterDriver(d)
+	sqlCommenterDriver := newSQLCommenterDriver(d)
 
 	if _, ok := d.(driver.DriverContext); ok {
-		connector, err := otDriver.OpenConnector(dataSourceName)
+		connector, err := sqlCommenterDriver.OpenConnector(dataSourceName)
 		if err != nil {
 			return nil, err
 		}
 		return sql.OpenDB(connector), nil
 	}
 
-	return sql.OpenDB(dsnConnector{dsn: dataSourceName, driver: otDriver}), nil
+	return sql.OpenDB(dsnConnector{dsn: dataSourceName, driver: sqlCommenterDriver}), nil
 }
