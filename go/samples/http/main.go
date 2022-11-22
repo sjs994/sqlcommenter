@@ -154,8 +154,8 @@ func main() {
 		db = runForPg()
 	}
 
-	db := connectToDB()
-	runAppUsingOTELHttp(db)
+	// db = connectToDB()
+	// runAppUsingOTELHttp(db)
 
 
 	db.Close()
