@@ -36,7 +36,7 @@ const (
 	Application string = "application"
 )
 
-type CommenterOptions struct {
+type CommenterConfig struct {
 	EnableDBDriver    bool
 	EnableRoute       bool
 	EnableFramework   bool
@@ -44,7 +44,16 @@ type CommenterOptions struct {
 	EnableAction      bool
 	EnableTraceparent bool
 	EnableApplication bool
-	Application       string
+}
+
+type StaticTags struct {
+	Application string
+	DriverName  string
+}
+
+type CommenterOptions struct {
+	Config CommenterConfig
+	Tags   StaticTags
 }
 
 func encodeURL(k string) string {
