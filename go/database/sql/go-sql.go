@@ -18,7 +18,6 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"fmt"
 
 	"github.com/google/sqlcommenter/go/core"
 )
@@ -26,25 +25,17 @@ import (
 var (
 	_ driver.Driver        = (*sqlCommenterDriver)(nil)
 	_ driver.DriverContext = (*sqlCommenterDriver)(nil)
+	_ driver.Connector     = (*sqlCommenterConnector)(nil)
 )
 
 // SQLCommenterDriver returns a driver object that contains SQLCommenter drivers.
 type sqlCommenterDriver struct {
-	driver driver.Driver
+	driver  driver.Driver
+	options core.CommenterOptions
 }
 
-func newSQLCommenterDriver(dri driver.Driver) *sqlCommenterDriver {
-	return &sqlCommenterDriver{driver: dri}
-}
-
-type sqlCommenterConn struct {
-	driver.Conn
-}
-
-func newSQLCommenterConn(conn driver.Conn) *sqlCommenterConn {
-	return &sqlCommenterConn{
-		Conn: conn,
-	}
+func newSQLCommenterDriver(dri driver.Driver, options core.CommenterOptions) *sqlCommenterDriver {
+	return &sqlCommenterDriver{driver: dri, options: options}
 }
 
 func (d *sqlCommenterDriver) Open(name string) (driver.Conn, error) {
@@ -52,7 +43,7 @@ func (d *sqlCommenterDriver) Open(name string) (driver.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newSQLCommenterConn(rawConn), nil
+	return newSQLCommenterConn(rawConn, d.options), nil
 }
 
 func (d *sqlCommenterDriver) OpenConnector(name string) (driver.Connector, error) {
@@ -60,20 +51,20 @@ func (d *sqlCommenterDriver) OpenConnector(name string) (driver.Connector, error
 	if err != nil {
 		return nil, err
 	}
-	return newConnector(rawConnector, d), err
+	return newConnector(rawConnector, d, d.options), err
 }
-
-var _ driver.Connector = (*sqlCommenterConnector)(nil)
 
 type sqlCommenterConnector struct {
 	driver.Connector
-	otDriver *sqlCommenterDriver
+	driver  *sqlCommenterDriver
+	options core.CommenterOptions
 }
 
-func newConnector(connector driver.Connector, otDriver *sqlCommenterDriver) *sqlCommenterConnector {
+func newConnector(connector driver.Connector, driver *sqlCommenterDriver, options core.CommenterOptions) *sqlCommenterConnector {
 	return &sqlCommenterConnector{
 		Connector: connector,
-		otDriver:  otDriver,
+		driver:    driver,
+		options:   options,
 	}
 }
 
@@ -82,14 +73,13 @@ func (c *sqlCommenterConnector) Connect(ctx context.Context) (connection driver.
 	if err != nil {
 		return nil, err
 	}
-	return newSQLCommenterConn(connection), nil
+	return newSQLCommenterConn(connection, c.options), nil
 }
 
 func (c *sqlCommenterConnector) Driver() driver.Driver {
-	return c.otDriver
+	return c.driver
 }
 
-// dsnConnector is copied from sql.dsnConnector
 type dsnConnector struct {
 	dsn    string
 	driver driver.Driver
@@ -103,45 +93,8 @@ func (t dsnConnector) Driver() driver.Driver {
 	return t.driver
 }
 
-func appendSQLComment(query string, commentMap map[string]string) string {
-	comment := core.ConvertMapToComment(commentMap)
-	return fmt.Sprintf(`%s /*%s*/`, query, comment)
-}
-
-func getComments(ctx context.Context) map[string]string {
-	m := map[string]string{}
-	fmt.Printf("Comments: %#v", ctx)
-	// Sorted alphabetically
-	if ctx.Value(core.Action) != nil {
-		m[core.Action] = ctx.Value(core.Action).(string)
-	}
-	if ctx.Value(core.Framework) != nil {
-		m[core.Framework] = ctx.Value(core.Framework).(string)
-	}
-	if ctx.Value(core.Route) != nil {
-		m[core.Route] = ctx.Value(core.Route).(string)
-	}
-	return m
-}
-
-func (s *sqlCommenterConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
-	queryer, ok := s.Conn.(driver.QueryerContext)
-	if !ok {
-		return nil, driver.ErrSkip
-	}
-	commentMap := getComments(ctx)
-	query = appendSQLComment(query, commentMap)
-	return queryer.QueryContext(ctx, query, args)
-}
-
-// Raw returns the underlying driver connection
-// Issue: https://github.com/XSAM/otelsql/issues/98
-func (s *sqlCommenterConn) Raw() driver.Conn {
-	return s.Conn
-}
-
 // Open is a wrapper over sql.Open with OTel instrumentation.
-func Open(driverName, dataSourceName string) (*sql.DB, error) {
+func Open(driverName, dataSourceName string, options core.CommenterOptions) (*sql.DB, error) {
 	// Retrieve the driver implementation we need to wrap with instrumentation
 	db, err := sql.Open(driverName, "")
 	if err != nil {
@@ -152,7 +105,7 @@ func Open(driverName, dataSourceName string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	sqlCommenterDriver := newSQLCommenterDriver(d)
+	sqlCommenterDriver := newSQLCommenterDriver(d, options)
 
 	if _, ok := d.(driver.DriverContext); ok {
 		connector, err := sqlCommenterDriver.OpenConnector(dataSourceName)
