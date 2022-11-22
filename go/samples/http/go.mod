@@ -22,13 +22,13 @@ require (
 
 require github.com/google/sqlcommenter/go/database/sql v0.0.2-beta
 
-replace github.com/google/sqlcommenter/go/database/sql v0.0.2-beta => github.com/sjs994/sqlcommenter/go/database/sql v0.0.2-alpha
+replace github.com/google/sqlcommenter/go/database/sql v0.0.2-beta => github.com/sjs994/sqlcommenter/go/database/sql v0.0.5-alpha
 
 require (
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/google/sqlcommenter/go/core v0.0.1-beta
-	github.com/google/sqlcommenter/go/net/http v0.0.1-beta
+	github.com/google/sqlcommenter/go/core v0.0.2-beta
+	github.com/google/sqlcommenter/go/net/http v0.0.2-beta
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
 	golang.org/x/sys v0.0.0-20220927170352-d9d178bc13c6 // indirect
 )

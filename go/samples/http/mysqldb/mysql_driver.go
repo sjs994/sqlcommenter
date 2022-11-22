@@ -1,15 +1,16 @@
 package mysqldb
 
 import (
-	"log"
 	"database/sql"
+	"log"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/sqlcommenter/go/core"
 	gosql "github.com/google/sqlcommenter/go/database/sql"
 )
 
 func ConnectMySQL(connection string) *sql.DB {
-	db, err := gosql.Open("mysql", connection)
+	db, err := gosql.Open("mysql", connection, core.CommenterOptions{EnableRoute: true})
 	if err != nil {
 		log.Fatalf("Failed to connect to MySQL(%q), error: %v", connection, err)
 	}

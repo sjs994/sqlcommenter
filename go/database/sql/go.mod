@@ -3,7 +3,7 @@ module github.com/google/sqlcommenter/go/database/sql
 go 1.19
 
 require (
-	github.com/google/sqlcommenter/go/core v0.0.1-beta
+	github.com/google/sqlcommenter/go/core v0.0.2-beta
 	go.opentelemetry.io/otel/sdk v1.10.0
 )
 
